@@ -1,56 +1,104 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>H.A.C.D.</title>
     <meta
       name="description"
-      content="Hyperscale Auto Consultation Designer. A scored campus brief and a schematic sheet set. Not sealed engineering."
+      content="Hyperscale Auto Consultation Designer. A scored campus brief, a costed risk range and a schematic sheet set — every figure traced to its source. Not sealed engineering."
     />
-    <meta name="theme-color" content="#07090c" />
+    <meta name="theme-color" content="#080a0a" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Syne:wght@500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="./tokens.css" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header class="top">
-      <p class="kicker">H.A.C.D. · Hyperscale Auto Consultation Designer</p>
-      <div class="top-row">
-        <div>
-          <h1 id="campus-title">Coastal Bend AI Campus</h1>
-          <p id="campus-sub" class="muted"></p>
+    <div class="shell">
+      <aside class="rail">
+        <div class="brand">
+          <span class="mark" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 1.6 14 5v6l-6 3.4L2 11V5z" /><path d="M8 8v6.4M8 8l6-3M8 8 2 5" />
+            </svg>
+          </span>
+          <span class="brandname title-md">H.A.C.D.<span class="sub eyebrow-sm">Consultation Designer</span></span>
         </div>
-        <div class="actions">
-          <button id="run" class="solid" type="button">Run lead demo</button>
-          <button id="tab-score" class="ghost on" type="button">Score</button>
-          <button id="tab-sheets" class="ghost" type="button">Drawings</button>
-        </div>
-      </div>
-    </header>
 
-    <main class="layout">
-      <aside class="panel">
-        <h2>Customer brief</h2>
-        <p class="muted">What they already know. The set redraws from this.</p>
-        <label>Campus <input id="name" /></label>
-        <div class="split">
-          <label>Acres <input id="acres" type="number" min="1" /></label>
-          <label>MW IT <input id="mw" type="number" min="1" /></label>
+        <div class="ws">
+          <span class="ws-label eyebrow-sm">Workspace <kbd class="kbd mono-xs">&#8984;K</kbd></span>
+          <button class="picker label" data-act="cmd" type="button">
+            <span class="dot live"></span><span id="campus-mini">Campus</span>
+            <span class="chev" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4" /></svg>
+            </span>
+          </button>
         </div>
-        <label>Market <input id="market" /></label>
-        <label class="check"><input id="dry" type="checkbox" /> Dry cooling</label>
-        <button id="generate" class="solid wide" type="button">Generate the package</button>
-        <p class="fine">Schematic issue. Not for construction. Not sealed.</p>
+
+        <nav id="nav" aria-label="Modules"></nav>
+
+        <div class="railfoot">
+          <button class="tool label wide" data-act="export" type="button">Export scenario</button>
+          <button class="tool label wide" data-act="theme" type="button" id="theme">Deliverable</button>
+          <button class="tool label wide" data-act="reset" type="button">Reset to pack</button>
+          <p class="caption faint fine">Schematic issue. Not for construction. Not sealed.</p>
+        </div>
       </aside>
 
-      <section id="score-view" class="stack"></section>
-      <section id="sheet-view" class="stack hidden"></section>
-    </main>
-    <script src="./app.js"></script>
+      <div class="col">
+        <header class="top">
+          <div class="crumbs">
+            <span class="eyebrow faint">H.A.C.D. / Campus feasibility</span>
+            <h1 class="display-lg" id="campus">Campus</h1>
+            <p class="body-sm muted" id="sub"></p>
+          </div>
+          <div class="scenario">
+            <span class="eyebrow faint">Active scenario</span>
+            <div class="track" id="branches" role="tablist" aria-label="Active scenario"></div>
+            <span class="caption faint" id="branch-note"></span>
+            <span class="mono-xs faint" id="rev"></span>
+          </div>
+        </header>
+
+        <main id="main" class="main"></main>
+
+        <footer class="foot caption faint">
+          H.A.C.D. is a planning tool. It produces a schematic issue for discussion — not a survey,
+          not calculations, not a sealed design. Every figure opens its provenance; anything it cannot
+          trace, it does not print.
+        </footer>
+      </div>
+    </div>
+
+    <div class="overlay" id="prov">
+      <aside class="drawer" role="dialog" aria-label="Provenance">
+        <button class="x" data-act="close-prov" type="button" aria-label="Close">&times;</button>
+        <div id="prov-body"></div>
+      </aside>
+    </div>
+
+    <div class="overlay" id="cmd">
+      <div class="cmdbar" role="dialog" aria-label="Command bar">
+        <div class="field">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.2" cy="7.2" r="4.6" /><path d="m10.6 10.6 3 3" /></svg>
+          <input id="cmd-input" placeholder="Jump to a view, a sheet, a branch or any value in the model" aria-label="Search" />
+          <kbd class="kbd mono-xs">ESC</kbd>
+        </div>
+        <div id="cmd-list" class="cmdlist"></div>
+        <div class="cmdfoot caption faint"><span>&uarr;&darr; move</span><span>&crarr; open</span><span>Every model path is reachable here</span></div>
+      </div>
+    </div>
+
+    <div id="printarea" class="printarea" aria-hidden="true"></div>
+
+    <script src="./js/model.js"></script>
+    <script src="./js/engine.js"></script>
+    <script src="./js/sheets.js"></script>
+    <script src="./js/ui.js"></script>
   </body>
 </html>
