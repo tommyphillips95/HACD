@@ -19,6 +19,22 @@ If you think you need a new repo or a parallel rebuild, you don't. Branch, chang
 
 Don't rewrite the app from scratch. Extend it. If something is wrong, fix that thing.
 
+## Reporting — #hacd
+
+Every agent reports into the **`#hacd`** Slack channel. It is the one place to see what changed in H.A.C.D. and who changed it.
+
+- **Pushes report themselves.** The GitHub app posts every commit and pull request on this repo into `#hacd`, so an agent with no Slack access is still covered: push to `main` and it shows up.
+- **An agent that can post to Slack sends a report after merging**, in this shape:
+
+  ```
+  [agent] What changed, in one line
+  Why: one line
+  Commit: <sha> · Verified: <how you checked it>
+  Open: anything left undone, or "nothing"
+  ```
+
+- Never report work as done unless it is on `main`.
+
 ## What the app is
 
 H.A.C.D. — Hyperscale Auto Consultation Designer. A zero-dependency static console: a campus brief goes in; a scored feasibility verdict, a P50/P80 capex range and a ten-sheet schematic set come out. It is a planning tool, not sealed engineering.
