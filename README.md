@@ -4,6 +4,8 @@ Hyperscale Auto Consultation Designer. A zero-dependency static console that tak
 
 It is a planning tool. Not a survey, not calculations, not sealed engineering.
 
+**This is the only H.A.C.D. repository, and `main` is the only version of the app.** Anyone — person or AI — working on it reads [AGENTS.md](AGENTS.md) first.
+
 ## Running it
 
 Static files, no build step. Netlify publishes the repo root (`netlify.toml`). Locally it needs a server, because the scripts are separate files:
