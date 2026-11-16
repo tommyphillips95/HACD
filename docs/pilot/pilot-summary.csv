@@ -1,0 +1,7 @@
+Metric,Baseline,Current,Target,Source
+Hours per feasibility study,,,20% below baseline,saved-time-log.csv
+Issues caught before client,,,,issues-caught.csv
+Capex P50 error vs known answer,,,Inside practice tolerance,Closed pursuit with a known outcome
+Studies completed,0,,,Export action logs
+Active users,0,,,user-feedback.csv
+User satisfaction,,,4 of 5 or higher,user-feedback.csv

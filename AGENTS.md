@@ -47,6 +47,8 @@ H.A.C.D. — Hyperscale Auto Consultation Designer. A zero-dependency static con
 | `js/ui.js` | The console. Reads the Scenario; never computes |
 | `tokens.css` | Design tokens. Don't hand-edit — regenerate from the design system |
 | `styles.css` | Components bound to tokens. No raw hex values |
+| `contracts/` | The action-log schema and the allowlist of actions that may be logged |
+| `docs/pilot/` | The pilot's success criteria and Excel-ready evidence trackers |
 
 No build step, no npm, no framework. Keep it that way unless there is a real reason.
 
@@ -58,6 +60,7 @@ No build step, no npm, no framework. Keep it that way unless there is a real rea
 4. **Math is a function.** Calculations live in `engine.js` as deterministic functions. The Monte Carlo seed stays pinned, so the same inputs always give the same answer.
 5. **Every sheet says it's schematic.** `NOT FOR CONSTRUCTION — NOT SEALED` stays on every sheet and every export.
 6. **No client names.** H.A.C.D. is client-neutral. Don't put a real company's name or branding in it.
+7. **The action log stays valid.** Every export's `action_log` must validate against `contracts/action-log.schema.json`. A new action goes into `approved-actions.schema.json` first, never as a loose string in the code.
 
 ## Running it
 

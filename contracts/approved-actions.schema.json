@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tommyphillips95/HACD/blob/main/contracts/approved-actions.schema.json",
+  "title": "H.A.C.D. Approved Actions",
+  "description": "The only actions that may appear in an action log. Adding one is a deliberate change to this file, never an ad hoc string in the code.",
+  "$defs": {
+    "approvedAction": {
+      "type": "string",
+      "enum": ["evaluate_scenario", "export_scenario", "print_sheet_set"]
+    }
+  }
+}

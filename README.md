@@ -24,6 +24,8 @@ python -m http.server 8777
 | `js/engine.js` | The deterministic engine: sizing, power, water, cost, schedule, carbon, and a seeded Monte Carlo |
 | `js/sheets.js` | The ten-sheet set; geometry is computed from the model, not drawn by hand |
 | `js/ui.js` | The console: four views, scenario branches, command bar, provenance drawer, export |
+| `contracts/` | The action-log schema every export conforms to, and the allowlist of actions that may be logged |
+| `docs/pilot/` | How a pilot proves H.A.C.D. works — the value formula, the success criteria, and Excel-ready trackers |
 
 ## The rules it enforces
 
@@ -44,3 +46,5 @@ Three scenario branches — Baseline, Accelerated, Constrained — recompute eve
 ## What is not built yet
 
 Intake (document ingestion with page citations), the agent mesh, the assurance sign-off ledger, and the Forge (report and deck generation). This is the console and the engine, not the whole product.
+
+Automated checking of design models — Revit, pyRevit, VIKTOR — belongs in the Assurance module when it's built. An earlier prototype sketched those integrations, but every one of them was a stub, so none of that code came across; the action-log contract it defined did, and now runs in every export.

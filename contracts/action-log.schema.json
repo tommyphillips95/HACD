@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tommyphillips95/HACD/blob/main/contracts/action-log.schema.json",
+  "title": "H.A.C.D. Action Log Entry",
+  "description": "One append-only record of an action H.A.C.D. performed. Every scenario export carries one, so a study can be audited after the fact: what ran, against which campus and run, and what it caught.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["timestamp", "project", "model", "action", "result"],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 time the action completed."
+    },
+    "project": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The campus the action ran against."
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The scenario branch and run id, e.g. 'baseline · run 8f430a36'. Identical inputs always produce an identical run id, so two entries with the same model string evaluated the same Scenario."
+    },
+    "action": {
+      "$ref": "./approved-actions.schema.json#/$defs/approvedAction",
+      "description": "An action from the allowlist. Nothing outside it may be logged."
+    },
+    "result": {
+      "type": "string",
+      "enum": ["success", "failure"],
+      "description": "Whether the action itself completed. A study that finds problems is still a success; the problems go in issues."
+    },
+    "issues": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Every check the run flagged. Omitted entirely when nothing was flagged.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["issue_type", "severity", "would_have_reached_client"],
+        "properties": {
+          "issue_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The id of the check that flagged it, e.g. 'power' or 'water'."
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "critical"],
+            "description": "A breached check logs as high, an at-risk check as medium."
+          },
+          "would_have_reached_client": {
+            "type": "boolean",
+            "description": "True when the problem would have gone into the client-facing study had this run not flagged it."
+          }
+        }
+      }
+    },
+    "duration_before_hours": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 24,
+      "multipleOf": 0.25,
+      "description": "Hours the same work took without H.A.C.D., in quarter hours. Recorded by a person in the pilot tracker — the app never fills this in, because it cannot know it."
+    },
+    "duration_after_hours": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 24,
+      "multipleOf": 0.25,
+      "description": "Hours the work took with H.A.C.D. Always recorded together with duration_before_hours, and never larger than it."
+    }
+  },
+  "allOf": [
+    { "if": { "required": ["duration_before_hours"] }, "then": { "required": ["duration_after_hours"] } },
+    { "if": { "required": ["duration_after_hours"] }, "then": { "required": ["duration_before_hours"] } }
+  ]
+}

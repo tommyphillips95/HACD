@@ -361,6 +361,26 @@
 
   // ---- export -----------------------------------------------------------
 
+  // One entry per export, valid against contracts/action-log.schema.json.
+  // Durations are left out on purpose: the app can't know them, so a person
+  // records them in the pilot tracker instead.
+  function actionLogEntry() {
+    var flagged = feas.checks.filter(function (c) { return c.status !== "pass"; });
+    var entry = {
+      timestamp: new Date().toISOString(),
+      project: feas.site.identity.name || "Untitled campus",
+      model: state.branch + " · run " + feas.runId,
+      action: "evaluate_scenario",
+      result: "success"
+    };
+    if (flagged.length) {
+      entry.issues = flagged.map(function (c) {
+        return { issue_type: c.id, severity: c.status === "fail" ? "high" : "medium", would_have_reached_client: true };
+      });
+    }
+    return entry;
+  }
+
   function exportJson() {
     var payload = {
       generated: new Date().toISOString(),
@@ -378,6 +398,7 @@
       risk: feas.risk,
       schedule: feas.schedule,
       carbon: feas.carbon,
+      action_log: [actionLogEntry()],
       disclaimer: "Schematic issue. Not for construction. Not sealed. No survey. No calculations."
     };
     var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
