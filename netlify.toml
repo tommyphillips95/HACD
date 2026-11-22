@@ -1,6 +1,3 @@
 [build]
   publish = "."
-  # The app has no build step. An empty command lets a command set in the
-  # Netlify UI run instead, and that command fails (exit 2) on deploy previews.
-  # A no-op here keeps the repo in charge of its own build.
-  command = "echo 'H.A.C.D. is a static site: no build step'"
+  command = ""
