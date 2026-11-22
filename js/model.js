@@ -28,7 +28,9 @@ window.HACD = window.HACD || {};
     "gal>Mgal": function (v) { return v / 1e6; },
     "kW>MW": function (v) { return v / 1000; },
     "MW>kW": function (v) { return v * 1000; },
-    "t>kt": function (v) { return v / 1000; }
+    "t>kt": function (v) { return v / 1000; },
+    "ac>km2": function (v) { return v * 0.0040468564224; },
+    "m>km": function (v) { return v / 1000; }
   };
 
   H.convert = function (value, from, to) {

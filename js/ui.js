@@ -9,7 +9,7 @@
 
   var state = {
     base: H.clone(H.DEMO),
-    prov: H.clone(H.DEMO_PROV),
+    prov: H.clone(H.PROV || H.DEMO_PROV),
     branch: "baseline",
     view: "overview",
     sheet: 0,
@@ -302,6 +302,9 @@
       rows += line(p.basis, p.source);
       if (p.tol) rows += line("tolerance", p.tol[0] + " to " + p.tol[1]);
       if (p.why) rows += line("why", p.why);
+      (p.evidence || []).forEach(function (e) {
+        rows += line("evidence", e.status + "  ·  " + e.value + (e.unit ? " " + e.unit : "") + "  ·  " + e.id);
+      });
     }
 
     function line(k, v) {
@@ -447,7 +450,7 @@
     else if (el.dataset.act === "print") printSet();
     else if (el.dataset.act === "export") exportJson();
     else if (el.dataset.act === "theme") { state.theme = state.theme === "dark" ? "light" : "dark"; save(); render(); }
-    else if (el.dataset.act === "reset") { state.base = H.clone(H.DEMO); state.prov = H.clone(H.DEMO_PROV); save(); render(); }
+    else if (el.dataset.act === "reset") { state.base = H.clone(H.DEMO); state.prov = H.clone(H.PROV || H.DEMO_PROV); save(); render(); }
     else if (el.dataset.act === "close-prov") closeProv();
     else if (el.dataset.act === "cmd") openCmd();
   });

@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tommyphillips95/HACD/blob/main/contracts/site-evidence-record.schema.json",
+  "title": "H.A.C.D. Site Evidence Record",
+  "description": "One piece of site evidence (a survey, a capture, a utility letter, a public dataset query, a document) and the facts it states. ADR-001: evidence is context with a date, accuracy, licence and review state. It is never silently treated as exact, and it never overwrites a proposed or verified value; it can only source a missing input, corroborate one, or flag a conflict.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id", "source_type", "source_ref", "captured_at", "crs", "location", "accuracy",
+    "licence", "chain_of_custody", "confidence", "review", "revalidate_by", "permitted_uses", "facts"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^ev-[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Stable id, e.g. 'ev-cb-usgs-3dep-elevation'. Provenance entries cite it."
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "survey", "drone_capture", "lidar", "satellite_imagery", "utility_record",
+        "public_dataset", "document", "model_output", "field_observation"
+      ],
+      "description": "What kind of thing the evidence is. A model_output is H.A.C.D.'s or another tool's own result: it can corroborate, never source."
+    },
+    "source_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "description": "Name of the document, dataset or capture." },
+        "locator": { "type": "string", "minLength": 1, "description": "Where in it: page, tab, section, layer." },
+        "uri": { "type": "string", "pattern": "^https://", "description": "Public address of the source. Leave out for private files; this repo is public." }
+      }
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the evidence was captured or queried (not when it was imported)."
+    },
+    "crs": {
+      "type": "string",
+      "pattern": "^EPSG:[0-9]+$",
+      "description": "Coordinate reference system of 'location' and of any geometry, e.g. 'EPSG:4326'."
+    },
+    "location": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["lat", "lon"],
+      "properties": {
+        "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+        "lon": { "type": "number", "minimum": -180, "maximum": 180 }
+      },
+      "description": "The point the evidence describes, in 'crs'. Null only for evidence with no spatial content."
+    },
+    "accuracy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "horizontal_m", "note"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["measured", "stated", "nominal", "unknown"],
+          "description": "measured: the source reports it. stated: the publisher states a typical figure. nominal: a convention, e.g. the sampling grid. unknown: nobody says; this is a valid answer, a missing field is not."
+        },
+        "horizontal_m": { "type": ["number", "null"], "minimum": 0 },
+        "note": { "type": "string", "minLength": 1 }
+      }
+    },
+    "licence": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Terms the evidence may be used under."
+    },
+    "chain_of_custody": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["at", "actor", "action"],
+        "properties": {
+          "at": { "type": "string", "format": "date-time" },
+          "actor": { "type": "string", "minLength": 1 },
+          "action": { "type": "string", "enum": ["captured", "queried", "exported", "transcribed", "imported", "reviewed"] }
+        }
+      },
+      "description": "Every hand the evidence passed through, oldest first."
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "How far a reader should lean on it. Say why in 'notes' when low."
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "reviewer", "reviewed_at"],
+      "properties": {
+        "state": { "type": "string", "enum": ["unreviewed", "reviewed", "rejected"] },
+        "reviewer": { "type": ["string", "null"], "minLength": 1 },
+        "reviewed_at": { "type": ["string", "null"], "format": "date-time" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "state": { "enum": ["reviewed", "rejected"] } } },
+          "then": { "properties": { "reviewer": { "type": "string" }, "reviewed_at": { "type": "string" } } }
+        }
+      ]
+    },
+    "revalidate_by": {
+      "type": "string",
+      "format": "date",
+      "description": "After this date the evidence can no longer source an input until someone revalidates it."
+    },
+    "permitted_uses": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "enum": ["context", "screening", "constraint", "scenario_input"] },
+      "description": "Only 'scenario_input' lets a fact fill a Scenario input that has no provenance."
+    },
+    "facts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "value", "unit"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^[a-z_]+\\.[a-z0-9_]+$",
+            "description": "Scenario path the fact speaks to, e.g. 'site.lat'. A path the Scenario does not have is kept as evidence and reported."
+          },
+          "value": { "type": ["number", "string", "boolean"] },
+          "unit": { "type": ["string", "null"], "description": "Unit as the source states it; null for flags and names." },
+          "locator": { "type": "string", "minLength": 1, "description": "Where this one fact sits in the source, and any arithmetic used to transcribe it." }
+        }
+      }
+    },
+    "notes": { "type": "string" }
+  }
+}

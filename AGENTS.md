@@ -42,12 +42,13 @@ H.A.C.D. — Hyperscale Auto Consultation Designer. A zero-dependency static con
 | File | Owns |
 | --- | --- |
 | `js/model.js` | The Scenario: typed quantities, unit conversion, the rate book, provenance for every input |
+| `js/evidence.js` | Site evidence: checks Evidence Records, folds them into provenance (never overwriting it), and carries the sample dossier |
 | `js/engine.js` | All calculation — sizing, power, water, cost, schedule, carbon, risk, checks |
 | `js/sheets.js` | The drawing set. Renders from the evaluated Scenario and nothing else |
 | `js/ui.js` | The console. Reads the Scenario; never computes |
 | `tokens.css` | Design tokens. Don't hand-edit — regenerate from the design system |
 | `styles.css` | Components bound to tokens. No raw hex values |
-| `contracts/` | The action-log schema and the allowlist of actions that may be logged |
+| `contracts/` | The action-log schema, the allowlist of actions that may be logged, and the Site Evidence Record schema |
 | `docs/pilot/` | The pilot's success criteria and Excel-ready evidence trackers |
 
 No build step, no npm, no framework. Keep it that way unless there is a real reason.
