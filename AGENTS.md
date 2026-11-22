@@ -72,6 +72,7 @@ Then open http://localhost:8777. It needs a server — opening `index.html` dire
 
 ## Before you push
 
+- Run `node --test "tests/*.test.js"`. Zero failures.
 - Load the page with the console open. Zero errors.
 - Click through all four views, in both themes.
 - Change an input and confirm the numbers and the sheets both move.

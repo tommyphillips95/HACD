@@ -14,6 +14,16 @@ Static files, no build step. Netlify publishes the repo root (`netlify.toml`). L
 python -m http.server 8777
 ```
 
+## Testing it
+
+Zero dependencies — Node 22 or later and nothing else:
+
+```
+node --test "tests/*.test.js"
+```
+
+The tests load `model.js`, `engine.js` and `sheets.js` exactly as the page does and check the two promises above: identical inputs give an identical run id and output, and every figure traces to an input, a method or a declared assumption. Known gaps run as `TODO` until they are fixed. GitHub Actions runs the same command on every push and pull request.
+
 ## How it is put together
 
 | File | What |
