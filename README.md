@@ -33,7 +33,10 @@ The tests load `model.js`, `engine.js` and `sheets.js` exactly as the page does 
 | `js/model.js` | The Scenario spine: typed quantities, unit conversion, the rate book, provenance for every input |
 | `js/engine.js` | The deterministic engine: sizing, power, water, cost, schedule, carbon, and a seeded Monte Carlo |
 | `js/sheets.js` | The ten-sheet set; geometry is computed from the model, not drawn by hand |
-| `js/ui.js` | The console: four views, scenario branches, command bar, provenance drawer, export |
+| `js/walk-model.js` | The walkthrough's building model: halls, rack rows, electrical rooms, yards and substation, laid out from the evaluated run as plain boxes, with counts that cite their inputs |
+| `js/walk.js` | The first-person 3D view of that model (three.js): materials, daylight and interior lighting, collision, HUD |
+| `js/ui.js` | The console: five views, scenario branches, command bar, provenance drawer, export |
+| `vendor/three/` | three.js r160 and two of its addons, vendored unmodified with their MIT licence. Loaded only when the Walkthrough opens |
 | `contracts/` | The action-log schema every export conforms to, and the allowlist of actions that may be logged |
 | `docs/pilot/` | How a pilot proves H.A.C.D. works — the value formula, the success criteria, and Excel-ready trackers |
 
@@ -44,11 +47,12 @@ The tests load `model.js`, `engine.js` and `sheets.js` exactly as the page does 
 - **Determinism over fluency.** Every calculation is a function. The Monte Carlo is seeded, so identical inputs always produce an identical answer, and the run id proves it.
 - **The model is the contract.** Sheets, tables and exports all render from the Scenario. Nothing holds its own copy of a number.
 
-## The four views
+## The five views
 
 **Overview** — the verdict, the metric row, the phasing plan and all eleven checks.
 **Brief** — the inputs, each showing its source, beside the open assumption register.
 **Drawings** — the sheet set, `G-001` through `CD-001`. Print lays the whole set out one sheet per page.
+**Walkthrough** — a first-person 3D walk through the campus the run describes: in through the front door, down the corridor, into the data halls (contained rack rows, busway, cable tray, CDUs at liquid densities), the electrical rooms (MV and LV switchgear, UPS, batteries), the mechanical gallery, the generator yard and the substation. WASD and mouse, or touch. Every layout dimension it assumes is declared in `H.WALK.CONVENTIONS` with a tolerance; every count in the HUD opens its inputs. Schematic massing, not a model of record.
 **Commercial** — bottom-up capex against the rate book, the P10/P50/P80/P90 range, and the assumptions driving the spread.
 
 Three scenario branches — Baseline, Accelerated, Constrained — recompute everything on identical bases. `⌘K` reaches any view, sheet, branch or model path.

@@ -297,6 +297,39 @@ table.cost tr.total td { border-bottom: 0; border-top: 1px solid var(--hairline-
 
 .printarea { display: none; }
 
+/* ---- walkthrough ---------------------------------------------------------- */
+.walk-intro { margin-bottom: var(--space-4); max-width: 760px; }
+.walk-host { position: relative; height: min(76vh, 860px); min-height: 420px; border-radius: var(--radius-lg); overflow: hidden; background: var(--surface-sunken); }
+.walk-host:fullscreen { height: 100vh; border-radius: 0; }
+.walk-canvas { display: block; width: 100%; height: 100%; outline: none; touch-action: none; }
+.walk-fallback { padding: var(--space-8); color: var(--ink-muted); }
+/* The HUD sits over a lit 3D scene, so it keeps the dark token set in both themes (ui.js pins data-theme="dark" on the host). */
+.walk-hud { position: absolute; inset: 0; pointer-events: none; color: var(--ink); }
+.walk-hud button, .walk-hud select { pointer-events: auto; }
+.walk-panel { position: absolute; top: var(--space-4); background: var(--scrim); border: 1px solid var(--hairline); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); backdrop-filter: blur(8px); }
+.walk-where { left: var(--space-4); max-width: 340px; display: flex; flex-direction: column; gap: var(--space-2); }
+.walk-facts { display: grid; gap: 2px; }
+.walk-facts div { display: flex; justify-content: space-between; gap: var(--space-4); }
+.walk-facts b { font-weight: 500; color: var(--ink-muted); }
+.walk-facts span[title] { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; pointer-events: auto; }
+.walk-look { color: var(--signal-cyan); min-height: 1.2em; }
+.walk-tools { right: var(--space-4); display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; justify-content: flex-end; max-width: 60%; }
+.walk-tools .tool.on { background: var(--signal-cyan); color: var(--on-signal); }
+.walk-select { background: var(--surface); color: var(--ink); border: 1px solid var(--border-control); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); max-width: 240px; }
+.walk-cross { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: var(--radius-pill); background: var(--ink); opacity: 0.7; box-shadow: 0 0 0 1px var(--canvas); }
+.walk-start { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 24px); display: flex; flex-direction: column; align-items: center; gap: var(--space-2); text-align: center; background: var(--scrim); padding: var(--space-4) var(--space-5); border-radius: var(--radius-md); }
+.walk-start[hidden] { display: none; }
+.walk-foot { position: absolute; left: var(--space-4); bottom: var(--space-3); right: var(--space-4); text-align: center; }
+.walk-stick { position: absolute; left: var(--space-6); bottom: var(--space-10); width: 112px; height: 112px; border-radius: var(--radius-pill); border: 1px solid var(--hairline-strong); background: var(--scrim); }
+.walk-stick[hidden] { display: none; }
+.walk-stick span { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: var(--radius-pill); background: var(--ink); opacity: 0.6; }
+@media (max-width: 640px) {
+  .walk-host { height: 72vh; }
+  .walk-where { max-width: 58%; padding: var(--space-2) var(--space-3); }
+  .walk-tools { top: auto; bottom: var(--space-10); right: var(--space-3); max-width: 46%; }
+  .walk-facts { display: none; }
+}
+
 @media print {
   .shell, .overlay { display: none !important; }
   .printarea { display: block; }

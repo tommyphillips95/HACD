@@ -7,7 +7,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const ROOT = path.join(__dirname, "..");
-const FILES = ["js/model.js", "js/engine.js", "js/sheets.js"];
+const FILES = ["js/model.js", "js/engine.js", "js/sheets.js", "js/walk-model.js"];
 
 // A frozen clock, so anything that stamps a date renders the same on every run.
 const FIXED_NOW = Date.parse("2026-01-01T00:00:00Z");

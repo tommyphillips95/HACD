@@ -44,7 +44,10 @@ H.A.C.D. — Hyperscale Auto Consultation Designer. A zero-dependency static con
 | `js/model.js` | The Scenario: typed quantities, unit conversion, the rate book, provenance for every input |
 | `js/engine.js` | All calculation — sizing, power, water, cost, schedule, carbon, risk, checks |
 | `js/sheets.js` | The drawing set. Renders from the evaluated Scenario and nothing else |
+| `js/walk-model.js` | The walkthrough's building model, laid out from the evaluated run. Layout conventions live in `H.WALK.CONVENTIONS`, each with tolerance and reason; new building types register in `H.WALK.TYPES` |
+| `js/walk.js` | Renders that model in 3D. Draws what `walk-model.js` gives it; never sizes anything |
 | `js/ui.js` | The console. Reads the Scenario; never computes |
+| `vendor/three/` | three.js, vendored unmodified. The app's only third-party code; no npm, no build |
 | `tokens.css` | Design tokens. Don't hand-edit — regenerate from the design system |
 | `styles.css` | Components bound to tokens. No raw hex values |
 | `contracts/` | The action-log schema and the allowlist of actions that may be logged |
@@ -74,5 +77,5 @@ Then open http://localhost:8777. It needs a server — opening `index.html` dire
 
 - Run `node --test "tests/*.test.js"`. Zero failures.
 - Load the page with the console open. Zero errors.
-- Click through all four views, in both themes.
+- Click through all five views, in both themes.
 - Change an input and confirm the numbers and the sheets both move.
