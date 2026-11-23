@@ -1,12 +1,20 @@
 /* H.A.C.D — the walkthrough renderer.
-   Draws the box model from js/walk-model.js with three.js: PBR materials from
-   procedural textures, a sky and a sun with shadows outside, fixture-driven
-   light inside, and first-person controls for mouse, keyboard and touch.
+   Draws the box model from js/walk-model.js, dressed with the parts from
+   js/walk-detail.js, with three.js: PBR materials from procedural textures, a
+   sky and a sun with soft shadows outside, fixture-driven light and haze
+   inside, ambient occlusion and bloom in a post chain, quality presets that
+   step down on their own when the frame rate drops, and first-person
+   controls for mouse, keyboard and touch.
    It never computes a design number; every count it shows comes from the model. */
 
 import * as THREE from "three";
 import { RoomEnvironment } from "../vendor/three/RoomEnvironment.js";
 import { Sky } from "../vendor/three/Sky.js";
+import { EffectComposer } from "../vendor/three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "../vendor/three/addons/postprocessing/RenderPass.js";
+import { GTAOPass } from "../vendor/three/addons/postprocessing/GTAOPass.js";
+import { UnrealBloomPass } from "../vendor/three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "../vendor/three/addons/postprocessing/OutputPass.js";
 
 const EYE = 1.7;
 const RADIUS = 0.32;
@@ -116,6 +124,15 @@ function makeTextures(H) {
     for (let i = 0; i < 48; ) {
       const span = r() < 0.25 ? 4 : (r() < 0.6 ? 2 : 1);
       const y0 = top + i * u, hh = span * u - 1;
+      if (r() < 0.2) {
+        // Blanking panel: flat black steel with pressed ribs, no lights.
+        x.fillStyle = "#0d0e10"; x.fillRect(10, y0, w - 20, hh);
+        x.fillStyle = "rgba(255,255,255,0.06)";
+        for (let k = 0; k < span; k++) x.fillRect(12, y0 + k * u + u / 2, w - 24, 1);
+        x.fillStyle = "#3a3e43"; x.fillRect(12, y0 + 1, 3, 3); x.fillRect(w - 15, y0 + 1, 3, 3);
+        i += span;
+        continue;
+      }
       x.fillStyle = r() < 0.15 ? "#1d2024" : "#25292e";
       x.fillRect(10, y0, w - 20, hh);
       x.fillStyle = "rgba(255,255,255,0.05)"; x.fillRect(10, y0, w - 20, 1);
@@ -251,6 +268,52 @@ function makeTextures(H) {
     noise(x, 256, 256, r, "#8a8a8a", 50, 0.6);
     T.rough = tex(c, { data: true });
   }
+  // Engraved equipment nameplate: white laminate, black text lines.
+  {
+    const c = canvas(128, 32), x = c.getContext("2d");
+    x.fillStyle = "#eceeea"; x.fillRect(0, 0, 128, 32);
+    x.fillStyle = "#1b1d1f"; x.fillRect(8, 8, 70, 6); x.fillRect(8, 19, 48, 4); x.fillRect(86, 8, 34, 15);
+    x.strokeStyle = "#1b1d1f"; x.lineWidth = 2; x.strokeRect(2, 2, 124, 28);
+    T.plate = tex(c); T.plate.wrapS = T.plate.wrapT = THREE.ClampToEdgeWrapping;
+  }
+  // Cable bundle: jacketed strands in a few colours, laid along one axis.
+  {
+    const draw = (vertical) => {
+      const c = canvas(64, 64), x = c.getContext("2d"), r = R(vertical ? 41 : 42);
+      x.fillStyle = "#1a1c1f"; x.fillRect(0, 0, 64, 64);
+      for (let i = 0; i < 64; i += 2) {
+        x.fillStyle = ["#2a2d31", "#1f5fb8", "#2a2d31", "#d9b61c", "#3b3f44", "#2a2d31", "#169a5f", "#c23434"][Math.floor(r() * 8)];
+        if (vertical) x.fillRect(i, 0, 1.6, 64); else x.fillRect(0, i, 64, 1.6);
+      }
+      return tex(c);
+    };
+    T.cableV = draw(true); T.cableH = draw(false);
+  }
+  // Ladder tray rungs: one rung per tile, transparent between, alpha-tested.
+  {
+    const draw = (alongZ) => {
+      const c = canvas(32, 32), x = c.getContext("2d");
+      x.clearRect(0, 0, 32, 32);
+      x.fillStyle = "#c9cdd0";
+      if (alongZ) x.fillRect(0, 13, 32, 6); else x.fillRect(13, 0, 6, 32);
+      return tex(c);
+    };
+    T.ladderZ = draw(true); T.ladderX = draw(false);
+  }
+  // Contact shadows: a front-to-back falloff for lineups, a soft pad for the rest.
+  {
+    const c = canvas(16, 128), x = c.getContext("2d");
+    const g = x.createLinearGradient(0, 0, 0, 128);
+    g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(0.22, "rgba(0,0,0,0.5)"); g.addColorStop(0.5, "rgba(0,0,0,0.75)");
+    g.addColorStop(0.78, "rgba(0,0,0,0.5)"); g.addColorStop(1, "rgba(0,0,0,0)");
+    x.fillStyle = g; x.fillRect(0, 0, 16, 128);
+    T.shadowStrip = tex(c); T.shadowStrip.wrapS = T.shadowStrip.wrapT = THREE.ClampToEdgeWrapping;
+  }
+  {
+    const c = canvas(128, 128), x = c.getContext("2d");
+    x.filter = "blur(10px)"; x.fillStyle = "rgba(0,0,0,0.8)"; x.fillRect(24, 24, 80, 80);
+    T.shadowSoft = tex(c); T.shadowSoft.wrapS = T.shadowSoft.wrapT = THREE.ClampToEdgeWrapping;
+  }
   return T;
 }
 
@@ -282,7 +345,7 @@ function makeMaterials(T, blinkUniform) {
   std("busway", { color: 0x8a9096, roughness: 0.35, metalness: 0.8 }, "world", 2);
   std("fiber", { color: 0xf4c400, roughness: 0.5 }, "world", 2);
   std("rack_side", { color: 0x16181b, roughness: 0.5, metalness: 0.6, roughnessMap: T.rough }, "world", 1);
-  const rf = std("rack_front", { map: T.rackFront, emissiveMap: T.rackFrontE, emissive: 0xffffff, emissiveIntensity: 1.6, roughness: 0.5, metalness: 0.55 }, "unit");
+  const rf = std("rack_front", { map: T.rackFront, emissiveMap: T.rackFrontE, emissive: 0xffffff, emissiveIntensity: 2.6, roughness: 0.5, metalness: 0.55 }, "unit");
   blink(rf, blinkUniform);
   std("rack_back", { map: T.rackBack, roughness: 0.6, metalness: 0.4 }, "unit");
   std("cab_grey", { color: 0xaeb3b5, roughness: 0.45, metalness: 0.5, roughnessMap: T.rough }, "world", 1);
@@ -302,6 +365,22 @@ function makeMaterials(T, blinkUniform) {
   std("pipe_blue", { color: 0x2f6fb0, roughness: 0.35, metalness: 0.4 }, "world", 1);
   std("pipe_red", { color: 0xb3402f, roughness: 0.35, metalness: 0.4 }, "world", 1);
   std("black", { color: 0x111214, roughness: 0.6, metalness: 0.3 }, "world", 1);
+  // Detail parts.
+  std("chrome", { color: 0xd4d8db, roughness: 0.18, metalness: 1, envMapIntensity: 1.4 }, "world", 1);
+  std("alu", { color: 0xc3c8cc, roughness: 0.3, metalness: 0.9, roughnessMap: T.rough }, "world", 1);
+  std("plate", { map: T.plate, roughness: 0.4, metalness: 0 }, "unit");
+  std("cable_v", { map: T.cableV, roughness: 0.65, metalness: 0 }, "world", 0.064);
+  std("cable_z", { map: T.cableV, roughness: 0.65, metalness: 0 }, "world", 0.064);
+  std("cable_x", { map: T.cableH, roughness: 0.65, metalness: 0 }, "world", 0.064);
+  std("ladder_z", { map: T.ladderZ, alphaTest: 0.5, roughness: 0.35, metalness: 0.9, side: THREE.DoubleSide }, "world", 0.3);
+  std("ladder_x", { map: T.ladderX, alphaTest: 0.5, roughness: 0.35, metalness: 0.9, side: THREE.DoubleSide }, "world", 0.3);
+  const decal = (key, map) => {
+    const m = new THREE.MeshBasicMaterial({ map, color: 0x000000, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    m.userData = { uv: "unit", scale: 1, envBase: 0 };
+    M[key] = m;
+  };
+  decal("shadow_strip", T.shadowStrip);
+  decal("shadow_soft", T.shadowSoft);
   return M;
 }
 
@@ -341,7 +420,7 @@ const KIND = {
   fence:       { m: ["fence"] },
   rack:        { m: ["rack_side", "rack_side", "rack_side", "rack_side", "rack_front", "rack_back"], cast: true, receive: true },
   busway:      { m: ["busway"], cast: true },
-  tray:        { m: ["galv"], cast: true },
+  tray:        { skip: true },   // drawn as ladder tray from js/walk-detail.js
   fiber_tray:  { m: ["fiber"] },
   tapbox:      { m: ["busway"] },
   pdu:         { m: ["cab_dark", "cab_dark", "cab_dark", "cab_dark", "battery", "cab_dark"], cast: true },
@@ -382,6 +461,7 @@ const FACES = [
 ];
 
 function mergeKind(boxes, spec, M) {
+  if (!boxes.length) return null;
   const keys = spec.m.length === 1 ? [spec.m[0], spec.m[0], spec.m[0], spec.m[0], spec.m[0], spec.m[0]] : spec.m;
   const mats = [...new Set(keys)];
   const pos = [], nor = [], uv = [], idx = mats.map(() => []);
@@ -508,7 +588,15 @@ const LABEL = {
 export function mountWalk(host, feas, H, opts = {}) {
   const model = H.WALK.build(feas);
   const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-  let quality = opts.quality || (coarse ? "low" : "high");
+  const QS = H.WALK.QUALITY;
+  // mode is what the person picked ("auto" or a preset); quality is the preset in force.
+  let mode = opts.quality && (opts.quality === "auto" || QS[opts.quality]) ? opts.quality : "auto";
+  const autoPick = () => H.WALK.pickQuality({
+    coarse, minSide: Math.min(window.screen ? screen.width : 9999, window.screen ? screen.height : 9999),
+    memory: navigator.deviceMemory, cores: navigator.hardwareConcurrency
+  });
+  let quality = mode === "auto" ? autoPick() : mode;
+  let Q = QS[quality];
 
   host.innerHTML = "";
   host.classList.add("walk-host");
@@ -523,14 +611,14 @@ export function mountWalk(host, feas, H, opts = {}) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
-  renderer.shadowMap.enabled = quality === "high";
+  renderer.shadowMap.enabled = Q.shadow > 0;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   host.appendChild(renderer.domElement);
   renderer.domElement.className = "walk-canvas";
   renderer.domElement.tabIndex = 0;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(70, 1, 0.08, 6000);
+  const camera = new THREE.PerspectiveCamera(70, 1, 0.12, 6000);
   camera.rotation.order = "YXZ";
 
   // Image-based light for reflections on metal and glass.
@@ -546,12 +634,14 @@ export function mountWalk(host, feas, H, opts = {}) {
   const sunDir = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(48), THREE.MathUtils.degToRad(215));
   su.sunPosition.value.copy(sunDir);
   scene.add(sky);
-  scene.fog = new THREE.Fog(0xc9d6df, 400, 3800);
+  // Outdoors the fog is distance haze; indoors it closes in to a light hall haze.
+  const FOG_OUT = new THREE.Color(0xc9d6df), FOG_IN = new THREE.Color(0x8f9aa3);
+  scene.fog = new THREE.Fog(FOG_OUT.clone(), 400, 3800);
 
   const sun = new THREE.DirectionalLight(0xfff1e0, 3.2);
-  sun.castShadow = quality === "high";
-  sun.shadow.mapSize.set(2048, 2048);
-  sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
+  sun.castShadow = Q.shadow > 0;
+  sun.shadow.mapSize.set(Q.shadow || 1024, Q.shadow || 1024);
+  sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04; sun.shadow.radius = 3;
   const sc = sun.shadow.camera; sc.left = -70; sc.right = 70; sc.top = 70; sc.bottom = -70; sc.near = 1; sc.far = 600;
   scene.add(sun, sun.target);
   const hemi = new THREE.HemisphereLight(0xcfe3ff, 0x6b5f4a, 1.1);
@@ -572,33 +662,60 @@ export function mountWalk(host, feas, H, opts = {}) {
   const meshes = [];
   for (const [kind, list] of byKind) {
     const mesh = mergeKind(list, KIND[kind], M);
+    if (!mesh) continue;
     mesh.name = kind;
     if (kind === "fence") mesh.renderOrder = 2;
     scene.add(mesh); meshes.push(mesh);
   }
 
-  // Light fixtures: emissive linear LEDs, instanced.
-  const fixGeo = new THREE.BoxGeometry(1.2, 0.06, 0.16);
-  const fixMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xf4f8ff, emissiveIntensity: 3.5, roughness: 0.3 });
-  const fixMesh = new THREE.InstancedMesh(fixGeo, fixMat, model.fixtures.length);
+  // Equipment detail: handles, nameplates, ladder tray, cable, framing, contact shadows.
+  const DK = H.WALK.DETAIL_KIND;
+  const byDetail = new Map();
+  for (const b of H.WALK.details(model)) {
+    if (!byDetail.has(b.kind)) byDetail.set(b.kind, []);
+    byDetail.get(b.kind).push(b);
+  }
+  const detailMeshes = [];
+  for (const [kind, list] of byDetail) {
+    const mesh = mergeKind(list, DK[kind], M);
+    if (!mesh) continue;
+    mesh.name = kind;
+    if (DK[kind].decal) mesh.renderOrder = 1;
+    mesh.userData.lite = H.WALK.LITE_SKIP.has(kind);
+    scene.add(mesh); detailMeshes.push(mesh);
+  }
+
+  // Light fixtures: a pendant linear LED, an aluminium housing over an opal
+  // diffuser, instanced so every fixture the model placed costs one draw.
   const tmp = new THREE.Object3D();
-  model.fixtures.forEach((f, i) => {
-    tmp.position.set(f.x, f.y, f.z);
-    tmp.rotation.set(0, f.axis === "z" ? Math.PI / 2 : 0, 0);
-    tmp.updateMatrix(); fixMesh.setMatrixAt(i, tmp.matrix);
-  });
-  scene.add(fixMesh);
+  const fixtures = (geo, mat) => {
+    const im = new THREE.InstancedMesh(geo, mat, Math.max(1, model.fixtures.length));
+    im.count = model.fixtures.length;
+    model.fixtures.forEach((f, i) => {
+      tmp.position.set(f.x, f.y, f.z);
+      tmp.rotation.set(0, f.axis === "z" ? Math.PI / 2 : 0, 0);
+      tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix);
+    });
+    scene.add(im);
+    return im;
+  };
+  const housingGeo = new THREE.BoxGeometry(1.24, 0.07, 0.17); housingGeo.translate(0, 0.03, 0);
+  const diffGeo = new THREE.BoxGeometry(1.18, 0.012, 0.12); diffGeo.translate(0, -0.012, 0);
+  const fixMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff6ea, emissiveIntensity: 4.5, roughness: 0.3 });
+  const housingMat = new THREE.MeshStandardMaterial({ color: 0x9da3a8, roughness: 0.35, metalness: 0.85 });
+  fixtures(housingGeo, housingMat);
+  const fixMesh = fixtures(diffGeo, fixMat);
 
   const signs = model.signs.map(signMesh);
   signs.forEach((m) => scene.add(m));
 
   // Interior light pool: a handful of real point lights parked on the fixtures
   // nearest the camera, so halls get local falloff without thousands of lights.
-  const POOL = quality === "high" ? 10 : 5;
   const pool = [];
-  for (let i = 0; i < POOL; i++) {
-    const l = new THREE.PointLight(0xf2f6ff, 0, 22, 2);
-    scene.add(l); pool.push(l);
+  function setPool(n) {
+    while (pool.length > n) scene.remove(pool.pop());
+    while (pool.length < n) { const l = new THREE.PointLight(0xfff4e6, 0, 24, 2); scene.add(l); pool.push(l); }
+    poolT = 0;
   }
 
   const colliders = H.WALK.colliders(model);
@@ -625,7 +742,8 @@ export function mountWalk(host, feas, H, opts = {}) {
     <div class="walk-panel walk-tools">
       <select class="walk-select label" data-w="go" aria-label="Go to">${options}</select>
       <button type="button" class="tool label" data-w="fly">Fly</button>
-      <button type="button" class="tool label" data-w="quality">${quality === "high" ? "High" : "Fast"}</button>
+      <button type="button" class="tool label" data-w="quality" title="Render quality. Auto steps down if the frame rate drops.">—</button>
+      <span class="walk-fps mono-xs faint" data-w="fps" aria-live="off"></span>
       <button type="button" class="tool label" data-w="full">Full screen</button>
     </div>
     <div class="walk-cross" aria-hidden="true"></div>
@@ -688,7 +806,12 @@ export function mountWalk(host, feas, H, opts = {}) {
   }
   $("fly").addEventListener("click", toggleFly);
   $("go").addEventListener("change", (e) => { goTo(e.target.value); canvasEl.focus(); });
-  $("quality").addEventListener("click", () => { if (opts.onQuality) opts.onQuality(quality === "high" ? "low" : "high"); });
+  $("quality").addEventListener("click", () => {
+    const cycle = ["auto"].concat(H.WALK.QUALITY_ORDER);
+    mode = cycle[(cycle.indexOf(mode) + 1) % cycle.length];
+    setQuality(mode === "auto" ? autoPick() : mode);
+    if (opts.onQuality) opts.onQuality(mode);
+  });
   $("full").addEventListener("click", () => { if (document.fullscreenElement) document.exitFullscreen(); else if (host.requestFullscreen) host.requestFullscreen(); });
 
   // Touch: left third is a joystick, the rest drags the view.
@@ -719,16 +842,68 @@ export function mountWalk(host, feas, H, opts = {}) {
   }
 
   // ---- sizing -----------------------------------------------------------------
+  let poolT = 0;
   function resize() {
-    const w = host.clientWidth, h = host.clientHeight;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality === "high" ? 2 : 1.25));
+    const w = Math.max(1, host.clientWidth), h = Math.max(1, host.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.pixelRatio));
     renderer.setSize(w, h, false);
-    camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix();
+    if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); }
+    camera.aspect = w / h; camera.updateProjectionMatrix();
   }
-  const ro = new ResizeObserver(resize); ro.observe(host); resize();
+
+  // ---- post chain -------------------------------------------------------------------
+  // Render into a half-float target (multisampled on high and up), then ground
+  // contact occlusion, then bloom on what is brighter than white (status LEDs,
+  // fixture lenses, sun glints), then tone mapping and sRGB in the output pass.
+  let composer = null, aoPass = null, bloomPass = null;
+  function buildComposer() {
+    if (composer) { composer.renderTarget1.dispose(); composer.renderTarget2.dispose(); if (aoPass) aoPass.dispose(); if (bloomPass) bloomPass.dispose(); }
+    composer = aoPass = bloomPass = null;
+    if (!Q.post) return;
+    const w = Math.max(1, host.clientWidth), h = Math.max(1, host.clientHeight), pr = renderer.getPixelRatio();
+    const rt = new THREE.WebGLRenderTarget(w * pr, h * pr, { type: THREE.HalfFloatType, samples: Q.msaa });
+    composer = new EffectComposer(renderer, rt);
+    composer.setPixelRatio(pr);
+    composer.addPass(new RenderPass(scene, camera));
+    if (Q.ao) {
+      aoPass = new GTAOPass(scene, camera, w, h);
+      aoPass.updateGtaoMaterial({ radius: 0.6, distanceExponent: 1.4, thickness: 1.2, scale: 1.0, samples: Q.aoSamples || 12 });
+      aoPass.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 16 });
+      aoPass.blendIntensity = 0.9;
+      composer.addPass(aoPass);
+    }
+    if (Q.bloom) {
+      bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 0.2, 0.25, 1.6);
+      composer.addPass(bloomPass);
+    }
+    composer.addPass(new OutputPass());
+    composer.setSize(w, h);
+  }
+
+  // Apply a preset live: pixel ratio, shadows, the post chain, the light pool
+  // and the smallest detail parts. No remount, so the walk keeps its place.
+  function setQuality(q) {
+    const prevShadow = Q.shadow;
+    quality = q; Q = QS[q];
+    if (Q.shadow !== prevShadow) {
+      renderer.shadowMap.enabled = sun.castShadow = Q.shadow > 0;
+      if (Q.shadow) sun.shadow.mapSize.set(Q.shadow, Q.shadow);
+      if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+      scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []); ms.forEach((m) => { m.needsUpdate = true; }); });
+    }
+    setPool(Q.pool);
+    detailMeshes.forEach((m) => { m.visible = !(Q.lite && m.userData.lite); });
+    resize();
+    buildComposer();
+    gov.reset();
+    $("quality").textContent = (mode === "auto" ? "Auto · " : "") + Q.label;
+  }
+  const gov = H.WALK.governor();
+  const ro = new ResizeObserver(resize); ro.observe(host);
+  setQuality(quality);
 
   // ---- the loop -----------------------------------------------------------------
-  let last = performance.now(), poolT = 0, hudT = 0, indoor = 0, lastIndoor = -1, zoneId = null;
+  let last = performance.now(), hudT = 0, fpsT = 0, indoor = 0, lastIndoor = -1, zoneId = null;
   const fwd = new THREE.Vector3(), right = new THREE.Vector3();
 
   function step(dt) {
@@ -778,7 +953,13 @@ export function mountWalk(host, feas, H, opts = {}) {
       lastIndoor = indoor;
       for (const k in M) M[k].envMapIntensity = M[k].userData.envBase * (1 - indoor * 0.75);
     }
-    scene.fog.near = 400 - indoor * 300;
+    scene.fog.near = 400 - indoor * 392;
+    scene.fog.far = 3800 - indoor * 3560;
+    scene.fog.color.copy(FOG_OUT).lerp(FOG_IN, indoor);
+    if (bloomPass) {
+      bloomPass.strength = 0.18 + indoor * 0.12;
+      bloomPass.threshold = 2.2 - indoor * 0.7;
+    }
     // keep the shadow box centred on the camera
     const c = new THREE.Vector3(pos.x, 0, pos.z);
     sun.target.position.copy(c);
@@ -790,7 +971,7 @@ export function mountWalk(host, feas, H, opts = {}) {
         const near = model.fixtures
           .map((f) => [f, (f.x - pos.x) ** 2 + (f.z - pos.z) ** 2])
           .filter((p) => p[1] < 900)
-          .sort((a, b) => a[1] - b[1]).slice(0, POOL);
+          .sort((a, b) => a[1] - b[1]).slice(0, pool.length);
         pool.forEach((l, i) => {
           const f = near[i];
           if (f) { l.position.set(f[0].x, f[0].y - 0.15, f[0].z); l.intensity = 55; } else l.intensity = 0;
@@ -825,14 +1006,25 @@ export function mountWalk(host, feas, H, opts = {}) {
     $("look").textContent = label;
   }
 
+  function draw() {
+    if (composer) composer.render(); else renderer.render(scene, camera);
+  }
+
+  let paused = false;
   function frame(now) {
     if (!running) return;
-    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (paused) { last = now; requestAnimationFrame(frame); return; }
+    const raw = (now - last) / 1000; last = now;
+    const dt = Math.min(0.05, raw);
     blinkU.value = now / 1000;
     step(dt);
     updateLights(dt);
     updateHud(dt);
-    renderer.render(scene, camera);
+    draw();
+    // Frame-rate check: the HUD shows it; in auto, a sustained drop steps down.
+    if (!document.hidden && gov.sample(raw) === "down" && mode === "auto" && quality !== "low") setQuality(H.WALK.stepDown(quality));
+    fpsT -= raw;
+    if (fpsT <= 0 && gov.fps) { fpsT = 0.5; $("fps").textContent = (gov.fps < 1 ? "<1" : Math.round(gov.fps)) + " fps"; }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -843,7 +1035,14 @@ export function mountWalk(host, feas, H, opts = {}) {
     pose() { return { runId: feas.runId, p: pos.toArray(), yaw, pitch, fly, spawn: $("go").value }; },
     goTo,
     // For tests and screenshots: render one frame now.
-    renderOnce() { step(0); for (let i = 0; i < 6; i++) updateLights(1); poolT = 0; updateLights(0); hudT = 0; updateHud(0); renderer.render(scene, camera); },
+    renderOnce() { step(0); for (let i = 0; i < 6; i++) updateLights(1); poolT = 0; updateLights(0); hudT = 0; updateHud(0); draw(); },
+    setQuality(q) { mode = q; setQuality(q === "auto" ? autoPick() : q); },
+    // For screenshots on slow software GL: hold the loop so renderOnce owns the frame.
+    pause(p) { paused = !!p; },
+    stats() {
+      const info = renderer.info;
+      return { mode, quality, fps: gov.fps, calls: info.render.calls, triangles: info.render.triangles, shadows: renderer.shadowMap.enabled, post: !!composer, ao: !!aoPass, bloom: !!bloomPass, pool: pool.length };
+    },
     dispose() {
       running = false;
       ro.disconnect();
@@ -857,6 +1056,9 @@ export function mountWalk(host, feas, H, opts = {}) {
         const ms = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
         ms.forEach((m) => { ["map", "emissiveMap", "roughnessMap"].forEach((k) => m[k] && m[k].dispose()); m.dispose(); });
       });
+      if (composer) { composer.renderTarget1.dispose(); composer.renderTarget2.dispose(); }
+      if (aoPass) aoPass.dispose();
+      if (bloomPass) bloomPass.dispose();
       envTex.dispose(); pmrem.dispose();
       renderer.dispose();
       host.innerHTML = "";

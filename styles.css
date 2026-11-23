@@ -313,8 +313,9 @@ table.cost tr.total td { border-bottom: 0; border-top: 1px solid var(--hairline-
 .walk-facts b { font-weight: 500; color: var(--ink-muted); }
 .walk-facts span[title] { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; pointer-events: auto; }
 .walk-look { color: var(--signal-cyan); min-height: 1.2em; }
-.walk-tools { right: var(--space-4); display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; justify-content: flex-end; max-width: 60%; }
+.walk-tools { right: var(--space-4); display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; justify-content: flex-end; max-width: min(60%, calc(100% - 340px - 3 * var(--space-4))); }
 .walk-tools .tool.on { background: var(--signal-cyan); color: var(--on-signal); }
+.walk-fps { min-width: 4.5em; text-align: right; font-variant-numeric: tabular-nums; }
 .walk-select { background: var(--surface); color: var(--ink); border: 1px solid var(--border-control); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); max-width: 240px; }
 .walk-cross { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: var(--radius-pill); background: var(--ink); opacity: 0.7; box-shadow: 0 0 0 1px var(--canvas); }
 .walk-start { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 24px); display: flex; flex-direction: column; align-items: center; gap: var(--space-2); text-align: center; background: var(--scrim); padding: var(--space-4) var(--space-5); border-radius: var(--radius-md); }

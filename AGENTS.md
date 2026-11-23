@@ -45,7 +45,8 @@ H.A.C.D. — Hyperscale Auto Consultation Designer. A zero-dependency static con
 | `js/engine.js` | All calculation — sizing, power, water, cost, schedule, carbon, risk, checks |
 | `js/sheets.js` | The drawing set. Renders from the evaluated Scenario and nothing else |
 | `js/walk-model.js` | The walkthrough's building model, laid out from the evaluated run. Layout conventions live in `H.WALK.CONVENTIONS`, each with tolerance and reason; new building types register in `H.WALK.TYPES` |
-| `js/walk.js` | Renders that model in 3D. Draws what `walk-model.js` gives it; never sizes anything |
+| `js/walk-detail.js` | Equipment detail for the walkthrough, quality presets and the frame-rate governor. Adds nothing solid and no count; every part hangs off a box the model placed |
+| `js/walk.js` | Renders that model in 3D. Draws what `walk-model.js` and `walk-detail.js` give it; never sizes anything |
 | `js/ui.js` | The console. Reads the Scenario; never computes |
 | `vendor/three/` | three.js, vendored unmodified. The app's only third-party code; no npm, no build |
 | `tokens.css` | Design tokens. Don't hand-edit — regenerate from the design system |

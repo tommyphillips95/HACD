@@ -203,7 +203,9 @@
     var setback = H.convert(s.site.setback_ft, "ft", "m");
     var siteMinX = devW / 2 - siteSide / 2, siteMinZ = devD / 2 - siteSide / 2;
 
-    b.box("grass", devW / 2, -0.06, devD / 2, siteSide + 400, 0.1, siteSide + 400, {});
+    // Grass sits 15 cm under the slabs and paving, so a 16-bit depth buffer
+    // (common on phones) cannot let it show through a hall floor.
+    b.box("grass", devW / 2, -0.2, devD / 2, siteSide + 400, 0.1, siteSide + 400, {});
     b.box("fence", devW / 2, 1.2, siteMinZ, siteSide, 2.4, 0.06, { solid: true });
     b.box("fence", devW / 2, 1.2, siteMinZ + siteSide, siteSide, 2.4, 0.06, { solid: true });
     b.box("fence", siteMinX, 1.2, devD / 2, 0.06, 2.4, siteSide, { solid: true });

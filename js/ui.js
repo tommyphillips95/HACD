@@ -275,7 +275,7 @@
       walk.handle = mod.mountWalk(host, f, H, {
         pose: walk.pose,
         quality: walk.quality,
-        onQuality: function (q) { walk.quality = q; unmountWalk(); render(); }
+        onQuality: function (q) { walk.quality = q; }
       });
       window.HACD_WALK = walk.handle;
     }).catch(function (err) {
