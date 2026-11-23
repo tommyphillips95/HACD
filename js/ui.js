@@ -242,12 +242,54 @@
       '<div class="grid-8-4">' + panel("ESTIMATE", "Bottom-up capex", table) + panel("RISK", "P50 / P80 range", risk) + '</div>';
   }
 
-  var VIEWS = { overview: overview, brief: brief, drawings: drawings, commercial: commercial };
+  // ---- walkthrough --------------------------------------------------------
+  // js/walk.js is an ES module with three.js behind it, so it loads only when
+  // someone opens this view. It reads the evaluated Scenario and computes nothing.
+
+  var walk = { handle: null, pose: null, quality: null, loading: false };
+
+  function walkthrough() {
+    var c = feas.d;
+    var tools = '<button class="tool label" data-view="drawings" type="button">Back to A-101</button>';
+    return panel("WALKTHROUGH", "Walk the campus",
+      '<p class="body-sm muted walk-intro">Every hall, rack row, UPS lineup and generator here is laid out from this run: ' +
+      H.fmt(feas.site.demand.target_mw, "MW") + ' IT across ' + c["space.hall_count"].value + ' hall modules at ' + feas.site.demand.rack_kw +
+      ' kW a rack, ' + feas.site.power.redundancy + ' power. Change the brief or the branch and the building changes with it.</p>' +
+      '<div id="walk-host" class="walk-host" data-theme="dark"><div class="walk-fallback body-sm">Loading the 3D model…</div></div>', tools);
+  }
+
+  function unmountWalk() {
+    if (!walk.handle) return;
+    walk.pose = walk.handle.pose();
+    walk.handle.dispose();
+    walk.handle = null;
+  }
+
+  function mountWalkView() {
+    var host = document.getElementById("walk-host");
+    if (!host) return;
+    var f = feas;
+    import("./walk.js").then(function (mod) {
+      if (state.view !== "walk" || feas !== f || !document.body.contains(host)) return;
+      unmountWalk();
+      walk.handle = mod.mountWalk(host, f, H, {
+        pose: walk.pose,
+        quality: walk.quality,
+        onQuality: function (q) { walk.quality = q; }
+      });
+      window.HACD_WALK = walk.handle;
+    }).catch(function (err) {
+      host.innerHTML = '<div class="walk-fallback body-sm">The walkthrough could not load: ' + esc(err && err.message ? err.message : err) + '</div>';
+    });
+  }
+
+  var VIEWS = { overview: overview, brief: brief, drawings: drawings, walk: walkthrough, commercial: commercial };
 
   var NAV = [
     ["overview", "Overview", "M2.5 6 8 2.5 13.5 6v7h-11z"],
     ["brief", "Brief", "M3 13V3h6l4 4v6zM9 3v4h4"],
     ["drawings", "Drawings", "M2.5 2.5h11v11h-11zM2.5 6h11M6 2.5v11"],
+    ["walk", "Walkthrough", "M8 1.6 14 5v6l-6 3.4L2 11V5zM8 8v6.4M8 8l6-3M8 8 2 5"],
     ["commercial", "Commercial", "M9 1.5 3.5 9H8l-1 5.5L12.5 7H8z"]
   ];
 
@@ -275,7 +317,9 @@
       H.fmt(feas.site.site.acres, "ac") + " · " + H.fmt(feas.site.demand.target_mw, "MW") + " IT · " +
       feas.site.identity.jurisdiction + " (" + feas.site.identity.iso + ")";
 
+    unmountWalk();
     document.getElementById("main").innerHTML = (VIEWS[state.view] || overview)();
+    if (state.view === "walk") mountWalkView();
     document.getElementById("theme").textContent = state.theme === "dark" ? "Deliverable" : "Console";
   }
 
